@@ -15,20 +15,19 @@
 
 class ps2dev
 {
-	public:
-		ps2dev(int clk_pin, int data_pin);
+public:
+	ps2dev(int clk_pin, int data_pin);
 
-	protected:
-		int write_byte(unsigned char data); // return 0 == no error
-		int read_byte(unsigned char * ptr); // return 0 == no error
+protected:
+	int write_byte(unsigned char data); // return 0 == no error
+	int read_byte(unsigned char * ptr); // return 0 == no error
 
-	private:
-		void set_high(int pin); // pin to high level
-		void set_low(int pin); // pin to low level
+private:
+	void set_high(int pin); // pin to high level
+	void set_low(int pin); // pin to low level
 
-		int _clk_pin;
-		int _data_pin;		
+	int _clk_pin;
+	int _data_pin;
 };
 
 #endif /* ps2dev_h */
-

@@ -1,8 +1,8 @@
 /*
  * ps2mouse.h - a library to emulate ps2 mouse for arduino.
- * 
+ *
  * Written by LiuLiu.mz, March 2020.
- * 
+ *
  */
 
 #ifndef ps2mouse_h
@@ -21,7 +21,7 @@ struct ps2mouse_sample
 	void clear();
 
 	char _left_btn, _right_btn, _middle_btn;
-  	int _dalta_x, _delta_y; // x y movement counter
+	int _dalta_x, _delta_y; // x y movement counter
 };
 
 enum ps2mouse_mode
@@ -31,30 +31,29 @@ enum ps2mouse_mode
 
 class ps2mouse : public ps2dev
 {
-	public:
-		ps2mouse();
+public:
+	ps2mouse();
 
-		void setup();
-		void loop();
-		void sample(const mouse_sample& sample);
+	void setup();
+	void loop();
+	void sample(const mouse_sample& sample);
 
-	private:
-		void write_ack(); // acknowledge a host command with 0xFA
-		void write_movement(); // write a movement(and button) info packet
-		void write_status(); // write mouse status packet
+private:
+	void write_ack(); // acknowledge a host command with 0xFA
+	void write_movement(); // write a movement(and button) info packet
+	void write_status(); // write mouse status packet
 
-		void process_cmd(int cmd);
-		
-		ps2mouse_mode _last_mode;
+	void process_cmd(int cmd);
 
-		ps2mouse_mode _mode;
-		char _sample_rate; // samples/sec
-		char _resolution; // 0 == 1count/ mm, 1 == 2count/mm, 2 == 4count/mm, 3 == 8count/mm
-		char _scaling; // 0 == 1:1, 1 == 2:1
-		char _enable; // enabel report movement pack
+	ps2mouse_mode _last_mode;
 
-		ring_queue<ps2mouse_sample> _sample_queue;
+	ps2mouse_mode _mode;
+	char _sample_rate; // samples/sec
+	char _resolution; // 0 == 1count/ mm, 1 == 2count/mm, 2 == 4count/mm, 3 == 8count/mm
+	char _scaling; // 0 == 1:1, 1 == 2:1
+	char _enable; // enabel report movement pack
+
+	ring_queue<ps2mouse_sample> _sample_queue;
 };
 
 #endif /* ps2mouse_h */
-
