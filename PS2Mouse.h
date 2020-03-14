@@ -8,20 +8,20 @@
 #ifndef ps2mouse_h
 #define ps2mouse_h
 
-//#include "WConstants.h"
 #include "MacroDef.h"
+#include "PS2Dev.h"
 #include "RingQueue.h"
 
 struct ps2mouse_sample
 {
 	ps2mouse_sample();
-	ps2mouse_sample(char left_btn, right_btn, middle_btn, int dalta_x, delta_y);
+	ps2mouse_sample(char left_btn, char right_btn, char middle_btn, int dalta_x, int delta_y);
 
 	bool merge(const ps2mouse_sample& other);
 	void clear();
 
 	char _left_btn, _right_btn, _middle_btn;
-	int _dalta_x, _delta_y; // x y movement counter
+	int _delta_x, _delta_y; // x y movement counter
 };
 
 enum ps2mouse_mode
@@ -36,7 +36,7 @@ public:
 
 	void setup();
 	void loop();
-	void sample(const mouse_sample& sample);
+	void sample(const ps2mouse_sample& sample);
 
 private:
 	void write_ack(); // acknowledge a host command with 0xFA
@@ -53,7 +53,8 @@ private:
 	char _scaling; // 0 == 1:1, 1 == 2:1
 	char _enable; // enabel report movement pack
 
-	ring_queue<ps2mouse_sample> _sample_queue;
+	ring_queue<ps2mouse_sample, 6> _sample_queue;
+	ps2mouse_sample _last_sent_sample;
 };
 
 #endif /* ps2mouse_h */

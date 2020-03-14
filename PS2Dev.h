@@ -10,8 +10,8 @@
 #ifndef ps2dev_h
 #define ps2dev_h
 
-#include "Arduino.h"
 #include "MacroDef.h"
+#include "Arduino.h"
 
 class ps2dev
 {

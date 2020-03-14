@@ -12,9 +12,9 @@ private:
 	int _tail_idx; // put to here
 
 public:
-	ring_queue() :
-		_head_idx = 0,
-		_tail_idx = 0
+	ring_queue():
+	_head_idx(0),
+	_tail_idx(0)
 	{
 	}
 
@@ -46,9 +46,9 @@ public:
 	}
 	*/
 
-	void put(T& value) // put value to tail
+	void put(const T& value) // put value to tail
 	{
-		_queue[_tail_idx] = T;
+		_queue[_tail_idx] = value;
 		_tail_idx = (_tail_idx + 1) % SIZE;
 
 		if (_tail_idx == _head_idx) // full, discard first
@@ -82,7 +82,7 @@ public:
 	{
 		if (_head_idx != _tail_idx)
 		{
-			return &_queue[_head_idx]
+			return &_queue[_head_idx];
 		}
 		else
 		{
@@ -94,7 +94,7 @@ public:
 	{
 		if (_head_idx != _tail_idx)
 		{
-			return &_queue[_tail_idx]
+			return &_queue[_tail_idx];
 		}
 		else
 		{

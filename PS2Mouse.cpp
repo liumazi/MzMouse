@@ -6,8 +6,9 @@
  */
 
 #include "ps2dev.h"
+#include "PS2Mouse.h"
 
-mouse_sample()::mouse_sample():
+ps2mouse_sample::ps2mouse_sample():
 _left_btn(0),
 _right_btn(0),
 _middle_btn(0),
@@ -16,16 +17,16 @@ _delta_y(0)
 {
 }
 
-mouse_sample::mouse_sample(char left_btn, right_btn, middle_btn, int dalta_x, delta_y):
+ps2mouse_sample::ps2mouse_sample(char left_btn, char right_btn, char middle_btn, int delta_x, int delta_y):
 _left_btn(left_btn),
 _right_btn(right_btn),
 _middle_btn(middle_btn),
-_delta_x(dalta_x),
+_delta_x(delta_x),
 _delta_y(delta_y)
 {
 }
 
-bool mouse_sample::merge(const ps2mouse_sample& other);
+bool ps2mouse_sample::merge(const ps2mouse_sample& other)
 {
 	if (_left_btn != other._left_btn)
 	{
@@ -67,16 +68,16 @@ bool mouse_sample::merge(const ps2mouse_sample& other);
 	return true;
 }
 
-void mouse_sample::clear()
+void ps2mouse_sample::clear()
 {
-	_dalta_x, _delta_y = 0;
+	_delta_x = _delta_y = 0;
 }
 
-#define MOUSE_CLK_PIN 3
-#define MOUSE_DATA_PIN 2
+#define PS2_MOUSE_CLK_PIN 3
+#define PS2_MOUSE_DATA_PIN 2
 
 ps2mouse::ps2mouse():
-ps2dev(MOUSE_CLK_PIN, MOUSE_DATA_PIN),
+ps2dev(PS2_MOUSE_CLK_PIN, PS2_MOUSE_DATA_PIN),
 _last_mode(mouse_mode_reset),
 _mode(mouse_mode_reset),
 _sample_rate(100),
@@ -84,7 +85,7 @@ _resolution(2),
 _scaling(0),
 _enable(0), // we start off not enabled
 _sample_queue(),
-_picketing(false)
+_last_sent_sample()
 {
 }
 
@@ -108,19 +109,18 @@ void ps2mouse::write_movement()
 	}
 
 	// packet data begin
-	// _picketing = true;
 
 	// the movement counters are 9-bit 2's complement integers
 	// if this range(-255 ~ 255) is exceeded, the counter is not inc/dec until it is reset
 
 	// fix delta_x to 9bit (-256 is invaild ?)
-	if (sample._delta_x > 255)
+	if (sample->_delta_x > 255)
 	{
 		overflow_x = 1;
 		fixed_x = 255;
 	}
 	else
-		if (sample._delta_x < -255)
+		if (sample->_delta_x < -255)
 		{
 			overflow_x = 1;
 			fixed_x = -255;
@@ -128,17 +128,17 @@ void ps2mouse::write_movement()
 		else
 		{
 			overflow_x = 0;
-			fixed_x = _delta_x;
+			fixed_x = sample->_delta_x;
 		}
 
 	// fix delta_y to 9bit (-256 is invaild ?)
-	if (sample._delta_y > 255)
+	if (sample->_delta_y > 255)
 	{
 		overflow_y = 1;
 		fixed_y = 255;
 	}
 	else
-		if (sample.delta_y < -255)
+		if (sample->_delta_y < -255)
 		{
 			overflow_y = 1;
 			fixed_y = -255;
@@ -146,7 +146,7 @@ void ps2mouse::write_movement()
 		else
 		{
 			overflow_y = 0;
-			fixed_y = delta_y;
+			fixed_y = sample->_delta_y;
 		}
 
 	data[0] =
@@ -155,9 +155,9 @@ void ps2mouse::write_movement()
 		(fixed_y >> 3 & 0x20) |
 		(fixed_x >> 4 & 0x10) |
 		(8) |
-		(sample._middle_btn << 2) |
-		(sample._right_btn << 1) |
-		(sample._left_btn << 0);
+		(sample->_middle_btn << 2) |
+		(sample->_right_btn << 1) |
+		(sample->_left_btn << 0);
 
 	/*
 	data[0] =
@@ -172,7 +172,6 @@ void ps2mouse::write_movement()
 	*/
 
 	// packet data end
-	// _picketing = false;
 
 	data[1] = fixed_x & 0xFF;
 	data[2] = fixed_y & 0xFF;
@@ -182,6 +181,7 @@ void ps2mouse::write_movement()
 		// sample._delta_x = 0;
 		// sample._delta_y = 0;
 		// _sample_queue.get();
+		_last_sent_sample = *sample;
 		_sample_queue.discard();
 	}
 	else
@@ -199,9 +199,9 @@ void ps2mouse::write_status()
 		(_enable << 5) |
 		(_scaling << 4) |
 		//(0 << 3)
-		(_left_btn << 2) |
-		(_middle_btn << 1) |
-		(_right_btn);
+		(_last_sent_sample._left_btn << 2) |
+		(_last_sent_sample._middle_btn << 1) |
+		(_last_sent_sample._right_btn);
 
 	write_byte(byte1);
 	write_byte(_resolution);
@@ -232,7 +232,6 @@ void ps2mouse::process_cmd(int command)
 		_resolution = 2;
 		_scaling = 0;
 		_enable = 0;
-		_picketing = false;
 
 		_sample_queue.clear();
 		break;
@@ -270,7 +269,7 @@ void ps2mouse::process_cmd(int command)
 	case 0xF4: // enable data reporting
 		write_ack();
 
-		_enable_report = 1;
+		_enable = 1;
 		_sample_queue.clear();
 		break;
 
@@ -393,7 +392,7 @@ void ps2mouse::loop()
 {
 	unsigned char cmd;
 
-	if (digitalRead(MOUSE_CLK_PIN) == LOW || digitalRead(MOUSE_DATA_PIN) == LOW)
+	if (digitalRead(PS2_MOUSE_CLK_PIN) == LOW || digitalRead(PS2_MOUSE_DATA_PIN) == LOW)
 	{
 		while (read_byte(&cmd)); // TODO: mouse_mode_wrap ..
 		process_cmd(cmd);
@@ -412,11 +411,11 @@ void ps2mouse::sample(const ps2mouse_sample& sample)
 {
 	if (_mode == mouse_mode_stream || _mode == mouse_mode_remote)
 	{
-		ps2mouse_sample* last_sample = _sample_buff.tail();
+		ps2mouse_sample* last_sample = _sample_queue.tail();
 
-		if (!last_sample || !last_sample.merge(sample))
+		if (!last_sample || !last_sample->merge(sample))
 		{
-			_sample_buff.put(sample);
+			_sample_queue.put(sample);
 		}
 	}
 }
