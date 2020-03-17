@@ -12,16 +12,18 @@ _left_btn(0),
 _right_btn(0),
 _middle_btn(0),
 _delta_x(0),
-_delta_y(0)
+_delta_y(0),
+_delta_z(0)
 {
 }
 
-ps2mouse_sample::ps2mouse_sample(char left_btn, char right_btn, char middle_btn, int delta_x, int delta_y):
+ps2mouse_sample::ps2mouse_sample(char left_btn, char right_btn, char middle_btn, int delta_x, int delta_y, int delta_z):
 _left_btn(left_btn),
 _right_btn(right_btn),
 _middle_btn(middle_btn),
 _delta_x(delta_x),
-_delta_y(delta_y)
+_delta_y(delta_y),
+_delta_z(delta_z)
 {
 }
 
@@ -62,14 +64,25 @@ bool ps2mouse_sample::merge(const ps2mouse_sample& other)
 		return false;
 	}
 
+	int delta_z = _delta_z + other._delta_z;
+	if (_delta_z > 0 && other._delta_z > 0 && delta_z < 0)
+	{
+		return false;
+	}
+	if (_delta_z < 0 && other._delta_z < 0 && delta_z >= 0)
+	{
+		return false;
+	}
+
 	_delta_x = delta_x;
 	_delta_y = delta_y;
+	_delta_z = delta_z;
 	return true;
 }
 
 void ps2mouse_sample::clear()
 {
-	_delta_x = _delta_y = 0;
+	_delta_x = _delta_y = _delta_z = 0;
 }
 
 #define PS2_MOUSE_CLK_PIN 3
@@ -133,8 +146,8 @@ void ps2mouse::send_ack()
 void ps2mouse::send_movement()
 {
 	char overflow_x, overflow_y;
-	int fixed_x, fixed_y;
-	unsigned char data[3];
+	int fixed_x, fixed_y, fixed_z;
+	unsigned char byte_0;
 
 	ps2mouse_sample* sample = _sample_queue.head();
 	if (!sample)
@@ -183,6 +196,20 @@ void ps2mouse::send_movement()
 			fixed_y = sample->_delta_y;
 		}
 
+	// fix delta_z to 4bit (-8 ~ 7)
+	if (sample->_delta_z > 7)
+	{
+		fixed_z = 7;
+	}
+	else
+		if (sample->_delta_z < -8)
+		{
+			fixed_z = -8;
+		}
+		else
+		{
+			fixed_z = sample->_delta_z;
+		}
 	/*
 	data[0] =
 	( (overflowy & 1) << 7) |
@@ -194,7 +221,7 @@ void ps2mouse::send_movement()
 	( ( buttons[2] & 1) << 1) |
 	( ( buttons[0] & 1) << 0) ;
 	*/
-	data[0] =
+	byte_0 =
 		(overflow_y << 7) |
 		(overflow_x << 6) |
 		(fixed_y >> 3 & 0x20) |
@@ -203,10 +230,13 @@ void ps2mouse::send_movement()
 		(sample->_middle_btn << 2) |
 		(sample->_right_btn << 1) |
 		(sample->_left_btn << 0);
+	/*
 	data[1] = fixed_x & 0xFF;
 	data[2] = fixed_y & 0xFF;
+	data[3] = fixed_z & 0xFF;
+	*/
 
-	if (!write(data[0]) && !write(data[1]) && !write(data[2]))
+	if (!write(byte_0) && !write(fixed_x) && !write(fixed_y) && !write(fixed_z))
 	{
 		_last_sent_sample = *sample;
 		_sample_queue.discard();
@@ -215,7 +245,7 @@ void ps2mouse::send_movement()
 
 void ps2mouse::send_status()
 {
-	unsigned char byte1 =
+	unsigned char byte_0 =
 		//(0 << 7) |
 		(_mode == mouse_mode_remote ? 4 : 0) |
 		(_enable << 5) |
@@ -225,7 +255,7 @@ void ps2mouse::send_status()
 		(_last_sent_sample._middle_btn << 1) |
 		(_last_sent_sample._right_btn);
 
-	write(byte1);
+	write(byte_0);
 	write(_resolution);
 	write(_sample_rate);
 }
@@ -308,7 +338,7 @@ void ps2mouse::process_cmd(int command)
 
 	case 0xF2: // get device id
 		send_ack();
-		write(0x00); // mouse.write(00); while ??
+		write(0x03); // mouse with wheel, TODO: why not while ??
 
 		_sample_queue.clear();
 		break;

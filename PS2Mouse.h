@@ -8,20 +8,20 @@
 #ifndef ps2mouse_h
 #define ps2mouse_h
 
-#include <ps2dev.h>
+#include <ps2dev.h> // https://github.com/Harvie/ps2dev
 #include "MacroDef.h"
 #include "RingQueue.h"
 
 struct ps2mouse_sample
 {
 	ps2mouse_sample();
-	ps2mouse_sample(char left_btn, char right_btn, char middle_btn, int dalta_x, int delta_y);
+	ps2mouse_sample(char left_btn, char right_btn, char middle_btn, int dalta_x, int delta_y, int delta_z);
 
 	bool merge(const ps2mouse_sample& other);
 	void clear();
 
 	char _left_btn, _right_btn, _middle_btn;
-	int _delta_x, _delta_y; // x y movement counter
+	int _delta_x, _delta_y, _delta_z; // x y z movement counter
 };
 
 enum ps2mouse_mode
