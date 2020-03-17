@@ -8,8 +8,8 @@
 #ifndef ps2mouse_h
 #define ps2mouse_h
 
+#include <ps2dev.h>
 #include "MacroDef.h"
-#include "PS2Dev.h"
 #include "RingQueue.h"
 
 struct ps2mouse_sample
@@ -29,32 +29,32 @@ enum ps2mouse_mode
 	mouse_mode_reset, mouse_mode_stream, mouse_mode_remote, mouse_mode_wrap
 };
 
-class ps2mouse : public ps2dev
+class ps2mouse : public PS2dev
 {
 public:
 	ps2mouse();
 
 	void setup();
 	void loop();
+
 	void sample(const ps2mouse_sample& sample);
 
 private:
-	void write_ack(); // acknowledge a host command with 0xFA
-	void write_movement(); // write a movement(and button) info packet
-	void write_status(); // write mouse status packet
+	void send_ack();      // acknowledge a host command with 0xFA
+	void send_movement(); // send a movement(and button) info packet
+	void send_status();   // send mouse status packet
 
 	void process_cmd(int cmd);
 
-	ps2mouse_mode _last_mode;
-
-	ps2mouse_mode _mode;
-	char _sample_rate; // samples/sec
-	char _resolution; // 0 == 1count/ mm, 1 == 2count/mm, 2 == 4count/mm, 3 == 8count/mm
-	char _scaling; // 0 == 1:1, 1 == 2:1
-	char _enable; // enabel report movement pack
+	ps2mouse_mode _mode; // mode
+	char _sample_rate;   // samples/sec
+	char _resolution;    // 0 == 1count/ mm, 1 == 2count/mm, 2 == 4count/mm, 3 == 8count/mm
+	char _scaling;       // 0 == 1:1, 1 == 2:1
+	char _enable;        // enabel report movement pack
+	ps2mouse_mode _last_mode; // for reset wrap mode
 
 	ring_queue<ps2mouse_sample, 6> _sample_queue;
-	ps2mouse_sample _last_sent_sample;
+	ps2mouse_sample _last_sent_sample; // for send_status()
 };
 
 #endif /* ps2mouse_h */

@@ -5,7 +5,6 @@
  *
  */
 
-#include "ps2dev.h"
 #include "PS2Mouse.h"
 
 ps2mouse_sample::ps2mouse_sample():
@@ -77,26 +76,61 @@ void ps2mouse_sample::clear()
 #define PS2_MOUSE_DATA_PIN 2
 
 ps2mouse::ps2mouse():
-ps2dev(PS2_MOUSE_CLK_PIN, PS2_MOUSE_DATA_PIN),
-_last_mode(mouse_mode_reset),
+PS2dev(PS2_MOUSE_CLK_PIN, PS2_MOUSE_DATA_PIN),
 _mode(mouse_mode_reset),
 _sample_rate(100),
 _resolution(2),
 _scaling(0),
 _enable(0), // we start off not enabled
+_last_mode(mouse_mode_reset),
 _sample_queue(),
 _last_sent_sample()
 {
 }
 
-// acknowledge a host command
-void ps2mouse::write_ack()
+void ps2mouse::setup()
 {
-	while (write_byte(0xFA)); // try to write until successful (may cause endless loop ??)
+	// send the mouse start up
+	write(0xAA);
+	write(0x00);
+}
+
+void ps2mouse::loop()
+{
+	unsigned char c;
+	if (digitalRead(PS2_MOUSE_CLK_PIN) == LOW || digitalRead(PS2_MOUSE_DATA_PIN) == LOW)
+	{
+		while (read(&c)); // TODO: endless loop ??
+		process_cmd(c);
+	}
+
+	if (_enable)
+	{
+		send_movement();
+	}
+}
+
+void ps2mouse::sample(const ps2mouse_sample& sample)
+{
+	if (_mode == mouse_mode_stream || _mode == mouse_mode_remote)
+	{
+		ps2mouse_sample* last_sample = _sample_queue.tail();
+
+		if (!last_sample || !last_sample->merge(sample))
+		{
+			_sample_queue.put(sample);
+		}
+	}
+}
+
+// acknowledge a host command
+void ps2mouse::send_ack()
+{
+	while (write(0xFA)); // try to write until successful, TODO: endless loop ??
 }
 
 // write a movement(and button) info packet
-void ps2mouse::write_movement()
+void ps2mouse::send_movement()
 {
 	char overflow_x, overflow_y;
 	int fixed_x, fixed_y;
@@ -149,16 +183,6 @@ void ps2mouse::write_movement()
 			fixed_y = sample->_delta_y;
 		}
 
-	data[0] =
-		(overflow_y << 7) |
-		(overflow_x << 6) |
-		(fixed_y >> 3 & 0x20) |
-		(fixed_x >> 4 & 0x10) |
-		(8) |
-		(sample->_middle_btn << 2) |
-		(sample->_right_btn << 1) |
-		(sample->_left_btn << 0);
-
 	/*
 	data[0] =
 	( (overflowy & 1) << 7) |
@@ -170,28 +194,26 @@ void ps2mouse::write_movement()
 	( ( buttons[2] & 1) << 1) |
 	( ( buttons[0] & 1) << 0) ;
 	*/
-
-	// packet data end
-
+	data[0] =
+		(overflow_y << 7) |
+		(overflow_x << 6) |
+		(fixed_y >> 3 & 0x20) |
+		(fixed_x >> 4 & 0x10) |
+		(8) |
+		(sample->_middle_btn << 2) |
+		(sample->_right_btn << 1) |
+		(sample->_left_btn << 0);
 	data[1] = fixed_x & 0xFF;
 	data[2] = fixed_y & 0xFF;
 
-	if (!write_byte(data[0]) && !write_byte(data[1]) && !write_byte(data[2]))
+	if (!write(data[0]) && !write(data[1]) && !write(data[2]))
 	{
-		// sample._delta_x = 0;
-		// sample._delta_y = 0;
-		// _sample_queue.get();
 		_last_sent_sample = *sample;
 		_sample_queue.discard();
 	}
-	else
-	{
-		// put sample to _sample_queue head
-		// _sample_queue.set(sample);
-	}
 }
 
-void ps2mouse::write_status()
+void ps2mouse::send_status()
 {
 	unsigned char byte1 =
 		//(0 << 7) |
@@ -203,13 +225,18 @@ void ps2mouse::write_status()
 		(_last_sent_sample._middle_btn << 1) |
 		(_last_sent_sample._right_btn);
 
-	write_byte(byte1);
-	write_byte(_resolution);
-	write_byte(_sample_rate);
+	write(byte1);
+	write(_resolution);
+	write(_sample_rate);
 }
 
 void ps2mouse::process_cmd(int command)
 {
+#ifdef PS2MOUSE_DEBUG
+	Serial.print("process_cmd ");
+	Serial.println(command, HEX);
+#endif
+
 	unsigned char value;
 
 	// This implements enough mouse commands to get by, most of them are
@@ -218,13 +245,12 @@ void ps2mouse::process_cmd(int command)
 	switch (command)
 	{
 	case 0xFF: // reset
-		_mode = mouse_mode_reset;
+		// _mode = mouse_mode_reset;
+		send_ack();
 
-		write_ack();
-
-		// the while loop lets us wait for the host to be ready
-		while (write_byte(0xAA)); // BAT successful  
-		while (write_byte(0x00)); // device ID, no extended mouse
+		// the while loop lets us wait for the host to be ready, TODO: endless loop ??
+		while (write(0xAA)); // BAT successful  
+		while (write(0x00)); // device ID, no extended mouse
 
 		_last_mode = mouse_mode_stream;
 		_mode = mouse_mode_stream;
@@ -232,16 +258,15 @@ void ps2mouse::process_cmd(int command)
 		_resolution = 2;
 		_scaling = 0;
 		_enable = 0;
-
 		_sample_queue.clear();
 		break;
 
 	case 0xFE: // resend, host receives invalid data form mouse
-		write_ack(); // responds the last packet, movenment / status / completion code id (AA 00) / ACK
+		send_ack(); // responds the last packet, movenment / status / completion code id (AA 00) / ACK
 		break;
 
 	case 0xF6: // set defaults    
-		write_ack();
+		send_ack();
 
 		// enter stream mode ??
 		// Sampling rate = 100
@@ -255,122 +280,103 @@ void ps2mouse::process_cmd(int command)
 		_resolution = 2;
 		_scaling = 0;
 		_enable = 0;
-
 		_sample_queue.clear();
 		break;
 
 	case 0xF5:  // disable data reporting
-		write_ack();
+		send_ack();
 
 		_enable = 0; // stream mode + disable report = remote mode
 		_sample_queue.clear();
 		break;
 
 	case 0xF4: // enable data reporting
-		write_ack();
+		send_ack();
 
 		_enable = 1;
 		_sample_queue.clear();
 		break;
 
 	case 0xF3: // set sample rate
-		write_ack();
-		read_byte(&value); // for now drop the new rate on the floor, while in read_byte() inside
+		send_ack();
+		read(&value); // for now drop the new rate on the floor, while in read() inside
+		send_ack();
 
-#ifdef DEBUG
-		Serial.print("set sample rate ");
-		Serial.println(value, HEX);
-#endif
 		_sample_rate = value;
-
-		write_ack();
-
 		_sample_queue.clear();
 		break;
 
 	case 0xF2: // get device id
-		write_ack();
-		while (write_byte(0x00)); // mouse.write_byte(00);
+		send_ack();
+		write(0x00); // mouse.write(00); while ??
 
 		_sample_queue.clear();
 		break;
 
 	case 0xF0: // set remote mode 
-		write_ack();
+		send_ack();
 
 		_last_mode = mouse_mode_remote;
 		_mode = mouse_mode_remote;
-
 		_sample_queue.clear();
 		break;
 
 	case 0xEE: // set wrap mode
-		write_ack();
+		send_ack();
 
 		_mode = mouse_mode_wrap;
-
 		_sample_queue.clear();
 		break;
 
 	case 0xEC: // reset wrap mode
-		write_ack();
+		send_ack();
 
 		_mode = _last_mode;
-
 		_sample_queue.clear();
 		break;
 
 	case 0xEB: // read data. if (_mode == mouse_mode_remote) ..
-		write_ack();
-		write_movement(); // not while ??
+		send_ack();
+		send_movement(); // not while ??
 
 		_sample_queue.clear();
 		break;
 
 	case 0xEA: // set stream mode
-		write_ack();
+		send_ack();
 
 		_last_mode = mouse_mode_stream;
 		_mode = mouse_mode_stream;
-
 		_sample_queue.clear();
 		break;
 
 	case 0xE9: // status request
-		write_ack();
-		write_status(); // not while ??
+		send_ack();
+		send_status(); // not while ??
 
 		_sample_queue.clear();
 		break;
 
 	case 0xE8: // set resolution
-		write_ack();
-		read_byte(&value);
+		send_ack();
+		read(&value);
+		send_ack();
 
-#ifdef DEBUG
-		Serial.print("set resolution ");
-		Serial.println(value, HEX);
-#endif
 		_resolution = value;
-
-		write_ack();
-
 		_sample_queue.clear();
 		break;
 
 	case 0xE7: // set scaling 2:1
-		write_ack();
+		send_ack();
 
 		_scaling = 1;
-
 		_sample_queue.clear();
 		break;
 
 	case 0xE6: // set scaling 1:1
-		write_ack();
+		send_ack();
 
 		_scaling = 0;
-
 		_sample_queue.clear();
 		break;
 
@@ -378,44 +384,5 @@ void ps2mouse::process_cmd(int command)
 	else
 		resend-0xFE Error-0xFC
 	*/
-	}
-}
-
-void ps2mouse::setup()
-{
-	// send the mouse start up
-	while (write_byte(0xAA)); // while(mouse.write(0xAA)!=0);  
-	while (write_byte(0x00)); // while(mouse.write(0x00)!=0);
-}
-
-void ps2mouse::loop()
-{
-	unsigned char cmd;
-
-	if (digitalRead(PS2_MOUSE_CLK_PIN) == LOW || digitalRead(PS2_MOUSE_DATA_PIN) == LOW)
-	{
-		while (read_byte(&cmd)); // TODO: mouse_mode_wrap ..
-		process_cmd(cmd);
-	}
-
-	if (_enable)
-	{
-		sample(ps2mouse_sample(0, 0, 0, 1, 1));
-		write_movement();
-	}
-
-	delay(50); // 200sample/sec
-}
-
-void ps2mouse::sample(const ps2mouse_sample& sample)
-{
-	if (_mode == mouse_mode_stream || _mode == mouse_mode_remote)
-	{
-		ps2mouse_sample* last_sample = _sample_queue.tail();
-
-		if (!last_sample || !last_sample->merge(sample))
-		{
-			_sample_queue.put(sample);
-		}
 	}
 }
