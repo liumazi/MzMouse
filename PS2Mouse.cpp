@@ -7,7 +7,7 @@
 
 #include "PS2Mouse.h"
 
-ps2mouse_sample::ps2mouse_sample():
+PS2MouseSample::PS2MouseSample():
 _left_btn(0),
 _right_btn(0),
 _middle_btn(0),
@@ -17,7 +17,7 @@ _delta_z(0)
 {
 }
 
-ps2mouse_sample::ps2mouse_sample(char left_btn, char right_btn, char middle_btn, int delta_x, int delta_y, int delta_z):
+PS2MouseSample::PS2MouseSample(char left_btn, char right_btn, char middle_btn, int delta_x, int delta_y, int delta_z):
 _left_btn(left_btn),
 _right_btn(right_btn),
 _middle_btn(middle_btn),
@@ -27,7 +27,7 @@ _delta_z(delta_z)
 {
 }
 
-bool ps2mouse_sample::merge(const ps2mouse_sample& other)
+bool PS2MouseSample::merge(const PS2MouseSample& other)
 {
 	if (_left_btn != other._left_btn)
 	{
@@ -80,7 +80,7 @@ bool ps2mouse_sample::merge(const ps2mouse_sample& other)
 	return true;
 }
 
-void ps2mouse_sample::clear()
+void PS2MouseSample::clear()
 {
 	_delta_x = _delta_y = _delta_z = 0;
 }
@@ -88,27 +88,27 @@ void ps2mouse_sample::clear()
 #define PS2_MOUSE_CLK_PIN 3
 #define PS2_MOUSE_DATA_PIN 2
 
-ps2mouse::ps2mouse():
+PS2Mouse::PS2Mouse():
 PS2dev(PS2_MOUSE_CLK_PIN, PS2_MOUSE_DATA_PIN),
-_mode(mouse_mode_reset),
+_mode(PS2_Mouse_Mode_Reset),
 _sample_rate(100),
 _resolution(2),
 _scaling(0),
 _enable(0), // we start off not enabled
-_last_mode(mouse_mode_reset),
+_last_mode(PS2_Mouse_Mode_Reset),
 _sample_queue(),
 _last_sent_sample()
 {
 }
 
-void ps2mouse::setup()
+void PS2Mouse::setup()
 {
 	// send the mouse start up
 	write(0xAA);
 	write(0x00);
 }
 
-void ps2mouse::loop()
+void PS2Mouse::loop()
 {
 	unsigned char c;
 	if (digitalRead(PS2_MOUSE_CLK_PIN) == LOW || digitalRead(PS2_MOUSE_DATA_PIN) == LOW)
@@ -123,11 +123,11 @@ void ps2mouse::loop()
 	}
 }
 
-void ps2mouse::sample(const ps2mouse_sample& sample)
+void PS2Mouse::sample(const PS2MouseSample& sample)
 {
-	if (_mode == mouse_mode_stream || _mode == mouse_mode_remote)
+	if (_mode == PS2_Mouse_Mode_Stream || _mode == PS2_Mouse_Mode_Remote)
 	{
-		ps2mouse_sample* last_sample = _sample_queue.tail();
+		PS2MouseSample* last_sample = _sample_queue.tail();
 
 		if (!last_sample || !last_sample->merge(sample))
 		{
@@ -137,19 +137,19 @@ void ps2mouse::sample(const ps2mouse_sample& sample)
 }
 
 // acknowledge a host command
-void ps2mouse::send_ack()
+void PS2Mouse::send_ack()
 {
 	while (write(0xFA)); // try to write until successful, TODO: endless loop ??
 }
 
 // write a movement(and button) info packet
-void ps2mouse::send_movement()
+void PS2Mouse::send_movement()
 {
 	char overflow_x, overflow_y;
 	int fixed_x, fixed_y, fixed_z;
 	unsigned char byte_0;
 
-	ps2mouse_sample* sample = _sample_queue.head();
+	PS2MouseSample* sample = _sample_queue.head();
 	if (!sample)
 	{
 		return;
@@ -243,11 +243,11 @@ void ps2mouse::send_movement()
 	}
 }
 
-void ps2mouse::send_status()
+void PS2Mouse::send_status()
 {
 	unsigned char byte_0 =
 		//(0 << 7) |
-		(_mode == mouse_mode_remote ? 4 : 0) |
+		(_mode == PS2_Mouse_Mode_Remote ? 4 : 0) |
 		(_enable << 5) |
 		(_scaling << 4) |
 		//(0 << 3)
@@ -260,7 +260,7 @@ void ps2mouse::send_status()
 	write(_sample_rate);
 }
 
-void ps2mouse::process_cmd(int command)
+void PS2Mouse::process_cmd(int command)
 {
 #ifdef MZ_MOUSE_DEBUG
 	Serial.print("process_cmd ");
@@ -275,15 +275,15 @@ void ps2mouse::process_cmd(int command)
 	switch (command)
 	{
 	case 0xFF: // reset
-		// _mode = mouse_mode_reset;
+		// _mode = PS2_Mouse_Mode_Reset;
 		send_ack();
 
 		// the while loop lets us wait for the host to be ready, TODO: endless loop ??
 		while (write(0xAA)); // BAT successful  
 		while (write(0x00)); // device ID, no extended mouse
 
-		_last_mode = mouse_mode_stream;
-		_mode = mouse_mode_stream;
+		_last_mode = PS2_Mouse_Mode_Stream;
+		_mode = PS2_Mouse_Mode_Stream;
 		_sample_rate = 100;
 		_resolution = 2;
 		_scaling = 0;
@@ -304,8 +304,8 @@ void ps2mouse::process_cmd(int command)
 		// Scaling = 1:1
 		// Disable Data Reporting
 
-		_last_mode = mouse_mode_stream;
-		_mode = mouse_mode_stream;
+		_last_mode = PS2_Mouse_Mode_Stream;
+		_mode = PS2_Mouse_Mode_Stream;
 		_sample_rate = 100;
 		_resolution = 2;
 		_scaling = 0;
@@ -346,15 +346,15 @@ void ps2mouse::process_cmd(int command)
 	case 0xF0: // set remote mode 
 		send_ack();
 
-		_last_mode = mouse_mode_remote;
-		_mode = mouse_mode_remote;
+		_last_mode = PS2_Mouse_Mode_Remote;
+		_mode = PS2_Mouse_Mode_Remote;
 		_sample_queue.clear();
 		break;
 
 	case 0xEE: // set wrap mode
 		send_ack();
 
-		_mode = mouse_mode_wrap;
+		_mode = PS2_Mouse_Mode_Wrap;
 		_sample_queue.clear();
 		break;
 
@@ -365,7 +365,7 @@ void ps2mouse::process_cmd(int command)
 		_sample_queue.clear();
 		break;
 
-	case 0xEB: // read data. if (_mode == mouse_mode_remote) ..
+	case 0xEB: // read data. if (_mode == PS2_Mouse_Mode_Remote) ..
 		send_ack();
 		send_movement(); // not while ??
 
@@ -375,8 +375,8 @@ void ps2mouse::process_cmd(int command)
 	case 0xEA: // set stream mode
 		send_ack();
 
-		_last_mode = mouse_mode_stream;
-		_mode = mouse_mode_stream;
+		_last_mode = PS2_Mouse_Mode_Stream;
+		_mode = PS2_Mouse_Mode_Stream;
 		_sample_queue.clear();
 		break;
 

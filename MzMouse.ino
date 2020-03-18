@@ -6,18 +6,24 @@
  */
 
 #include "PS2Mouse.h"
+#include "USBReader.h"
 
-ps2mouse ps2mouse;
+PS2Mouse ps2_mouse;
+USBReader usb_reader;
 
 void setup()
 {
-	ps2mouse.setup();
+#ifdef MZ_MOUSE_DEBUG
+	Serial.begin(115200);
+#endif
+	ps2_mouse.setup();
+	usb_reader.setup();
 }
 
 void loop()
 {
-	ps2mouse.loop();
-	ps2mouse.sample(ps2mouse_sample(0, 0, 0, 1, 1, -1));
+	ps2_mouse.loop();
+	ps2_mouse.sample(PS2MouseSample(0, 0, 0, 1, 1, -1));
 
 	delay(50); // TODO: delta
 }

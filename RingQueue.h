@@ -11,7 +11,7 @@
 #include "MacroDef.h"
 
 template <typename T, int SIZE>
-class ring_queue
+class RingQueue
 {
 private:
 	T _queue[SIZE];
@@ -19,7 +19,7 @@ private:
 	int _tail_idx; // put to here
 
 public:
-	ring_queue():
+	RingQueue():
 	_head_idx(0),
 	_tail_idx(0)
 	{
