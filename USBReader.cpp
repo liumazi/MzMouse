@@ -7,15 +7,16 @@
 
 #include "USBReader.h"
 
-USBReader::USBReader():
-HIDUniversal(&_Usb)
+USBReader::USBReader(USBMouseData_Callback data_callback):
+HIDUniversal(&_usb),
+_data_callback(data_callback)
 {
 
 }
 
 void USBReader::setup()
 {
-	if (_Usb.Init() == -1)
+	if (_usb.Init() == -1)
 	{
 #ifdef MZ_MOUSE_DEBUG
 		Serial.println("usb init failed");
@@ -25,10 +26,17 @@ void USBReader::setup()
 
 void USBReader::loop()
 {
-	_Usb.Task();
+	_usb.Task();
 }
 
 void USBReader::ParseHIDData(USBHID *hid, bool is_rpt_id, uint8_t len, uint8_t *buf)
 {
-
+#ifdef MZ_MOUSE_DEBUG
+	Serial.print("HID Data Len");
+	Serial.println(len);
+#endif
+	if (buf != nullptr && sizeof(USBMouseData) == len && _data_callback)
+	{
+		_data_callback((USBMouseData*)buf);
+	}
 }
