@@ -1,5 +1,5 @@
 /*
- * ps2mouse.h - a library to emulate ps2 mouse for arduino.
+ * PS2Mouse.h - Emulate a PS/2 mouse.
  *
  * Written by LiuLiu.mz, March 2020.
  *

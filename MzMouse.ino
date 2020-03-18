@@ -1,3 +1,10 @@
+/*
+ * MzMouse.ino - Convert USB mouse to PS/2 mouse.
+ *
+ * Written by LiuLiu.mz, March 2020.
+ *
+ */
+
 #include "PS2Mouse.h"
 
 ps2mouse ps2mouse;

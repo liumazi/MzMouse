@@ -1,7 +1,7 @@
 /*
- * ps2mouse.h - a library to emulate ps2 mouse.
+ * PS2Mouse.cpp - Emulate a PS/2 mouse.
  *
- * Modified by LiuLiu.mz, March 2020.
+ * Written by LiuLiu.mz, March 2020.
  *
  */
 

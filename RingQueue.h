@@ -1,3 +1,10 @@
+/*
+ * RingQueue.h - A ring queue container.
+ *
+ * Written by LiuLiu.mz, March 2020.
+ *
+ */
+
 #ifndef _RING_QUEUE_H_
 #define _RING_QUEUE_H_
 
