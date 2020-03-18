@@ -262,7 +262,7 @@ void ps2mouse::send_status()
 
 void ps2mouse::process_cmd(int command)
 {
-#ifdef PS2MOUSE_DEBUG
+#ifdef MZ_MOUSE_DEBUG
 	Serial.print("process_cmd ");
 	Serial.println(command, HEX);
 #endif
