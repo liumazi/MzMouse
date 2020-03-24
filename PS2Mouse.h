@@ -21,7 +21,7 @@ struct PS2MouseSample
 	void clear();
 
 	char _left_btn, _right_btn, _middle_btn;
-	int _delta_x, _delta_y, _delta_z; // x y z movement counter
+	char _delta_x, _delta_y, _delta_z; // x y z movement counter
 };
 
 enum PS2MouseMode
@@ -41,7 +41,7 @@ public:
 
 private:
 	void send_ack();      // acknowledge a host command with 0xFA
-	void send_movement(); // send a movement(and button) info packet
+	bool send_movement(); // send a movement(and button) info packet
 	void send_status();   // send mouse status packet
 
 	void process_cmd(int cmd);
@@ -53,7 +53,7 @@ private:
 	char _enable;        // enabel report movement pack
 	PS2MouseMode _last_mode; // for reset wrap mode
 
-	RingQueue<PS2MouseSample, 6> _sample_queue;
+	RingQueue<PS2MouseSample, 16> _sample_queue;
 	PS2MouseSample _last_sent_sample; // for send_status()
 };
 

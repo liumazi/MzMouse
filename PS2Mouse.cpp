@@ -52,7 +52,11 @@ bool PS2MouseSample::merge(const PS2MouseSample& other)
 	if (_delta_x < 0 && other._delta_x < 0 && delta_x >= 0)
 	{
 		return false;
-	}
+	}/*
+	if (delta_x > 255 || delta_x < -255)
+	{
+		return false;
+	}*/
 
 	int delta_y = _delta_y + other._delta_y;
 	if (_delta_y > 0 && other._delta_y > 0 && delta_y < 0)
@@ -62,7 +66,11 @@ bool PS2MouseSample::merge(const PS2MouseSample& other)
 	if (_delta_y < 0 && other._delta_y < 0 && delta_y >= 0)
 	{
 		return false;
-	}
+	}/*
+	if (delta_y > 255 || delta_y < -255)
+	{
+		return false;
+	}*/
 
 	int delta_z = _delta_z + other._delta_z;
 	if (_delta_z > 0 && other._delta_z > 0 && delta_z < 0)
@@ -70,6 +78,10 @@ bool PS2MouseSample::merge(const PS2MouseSample& other)
 		return false;
 	}
 	if (_delta_z < 0 && other._delta_z < 0 && delta_z >= 0)
+	{
+		return false;
+	}
+	if (delta_z > 7 || delta_z < -7)
 	{
 		return false;
 	}
@@ -110,16 +122,31 @@ void PS2Mouse::setup()
 
 void PS2Mouse::loop()
 {
-	unsigned char c;
 	if (digitalRead(PS2_MOUSE_CLK_PIN) == LOW || digitalRead(PS2_MOUSE_DATA_PIN) == LOW)
 	{
-		while (read(&c)); // TODO: endless loop ??
-		process_cmd(c);
+		unsigned char cmd, n = 0;
+		/*
+		while (n < 2 && read(&cmd)) // TODO: endless loop ??
+		{
+			n++;
+		}
+
+		if (n < 2)
+		{
+			process_cmd(cmd);
+		}
+		*/
+
+		if (read(&cmd) == 0)
+		{
+			process_cmd(cmd);
+		}
 	}
 
 	if (_enable)
 	{
-		send_movement();
+		int n = _sample_queue.len(); // (_sample_queue.len() + 1) / 2;
+		while (n-- > 0 && send_movement());
 	}
 }
 
@@ -143,7 +170,7 @@ void PS2Mouse::send_ack()
 }
 
 // write a movement(and button) info packet
-void PS2Mouse::send_movement()
+bool PS2Mouse::send_movement()
 {
 	char overflow_x, overflow_y;
 	int fixed_x, fixed_y, fixed_z;
@@ -152,7 +179,7 @@ void PS2Mouse::send_movement()
 	PS2MouseSample* sample = _sample_queue.head();
 	if (!sample)
 	{
-		return;
+		return false;
 	}
 
 	// packet data begin
@@ -240,6 +267,11 @@ void PS2Mouse::send_movement()
 	{
 		_last_sent_sample = *sample;
 		_sample_queue.discard();
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
