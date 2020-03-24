@@ -8,13 +8,13 @@
 #ifndef _USB_READER_H_
 #define _USB_READER_H_
 
-#include <hiduniversal.h>
+#include <hiduniversal.h> // https://github.com/felis/USB_Host_Shield_2.0
 #include "MacroDef.h"
 
 #pragma pack(1)
 
 // the data struct of my usb mouse, get it with the help of usblyzer
-struct USBMouseData
+struct USBMouseData_Rapoo1680
 {
 	struct
 	{
@@ -28,7 +28,7 @@ struct USBMouseData
 	char _delta_z;
 };
 
-typedef void (*USBMouseData_Callback)(USBMouseData*);
+typedef void (*USBMouseData_Callback)(USBMouseData_Rapoo1680*);
 
 class USBReader: public HIDUniversal
 {

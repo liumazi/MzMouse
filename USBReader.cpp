@@ -35,8 +35,8 @@ void USBReader::ParseHIDData(USBHID *hid, bool is_rpt_id, uint8_t len, uint8_t *
 	Serial.print("HID Data Len");
 	Serial.println(len);
 #endif
-	if (buf != nullptr && sizeof(USBMouseData) == len && _data_callback)
+	if (buf != nullptr && sizeof(USBMouseData_Rapoo1680) == len && _data_callback)
 	{
-		_data_callback((USBMouseData*)buf);
+		_data_callback((USBMouseData_Rapoo1680*)buf);
 	}
 }
