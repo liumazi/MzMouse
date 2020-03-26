@@ -15,13 +15,14 @@
 struct PS2MouseSample
 {
 	PS2MouseSample();
-	PS2MouseSample(char left_btn, char right_btn, char middle_btn, int dalta_x, int delta_y, int delta_z);
+	PS2MouseSample(char left_btn, char right_btn, char middle_btn, int dalta_x, int delta_y, char delta_z);
 
 	bool merge(const PS2MouseSample& other);
 	void clear();
 
 	char _left_btn, _right_btn, _middle_btn;
-	char _delta_x, _delta_y, _delta_z; // x y z movement counter
+	int _delta_x, _delta_y; // x y movement counter, used 9bit, -255~255
+	char _delta_z; // z movement counter, used 4bit, -8~7
 };
 
 enum PS2MouseMode

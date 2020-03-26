@@ -23,7 +23,7 @@ struct USBMouseData_Rapoo1680
 		unsigned char _middle_btn : 1;
 		unsigned char _dummy : 5;
 	};
-	int _delta_x; // 2 byte
+	int _delta_x; // 2 byte on Arduino UNO R3
 	int _delta_y;
 	char _delta_z;
 };

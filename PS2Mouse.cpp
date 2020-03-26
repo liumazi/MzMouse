@@ -17,7 +17,7 @@ _delta_z(0)
 {
 }
 
-PS2MouseSample::PS2MouseSample(char left_btn, char right_btn, char middle_btn, int delta_x, int delta_y, int delta_z):
+PS2MouseSample::PS2MouseSample(char left_btn, char right_btn, char middle_btn, int delta_x, int delta_y, char delta_z):
 _left_btn(left_btn),
 _right_btn(right_btn),
 _middle_btn(middle_btn),
@@ -44,43 +44,22 @@ bool PS2MouseSample::merge(const PS2MouseSample& other)
 		return false;
 	}
 
+	// impossible to overflow, unless that two values are very large or very samll
 	int delta_x = _delta_x + other._delta_x;
-	if (_delta_x > 0 && other._delta_x > 0 && delta_x < 0)
-	{
-		return false;
-	}
-	if (_delta_x < 0 && other._delta_x < 0 && delta_x >= 0)
-	{
-		return false;
-	}/*
 	if (delta_x > 255 || delta_x < -255)
 	{
 		return false;
-	}*/
-
-	int delta_y = _delta_y + other._delta_y;
-	if (_delta_y > 0 && other._delta_y > 0 && delta_y < 0)
-	{
-		return false;
 	}
-	if (_delta_y < 0 && other._delta_y < 0 && delta_y >= 0)
-	{
-		return false;
-	}/*
+
+	// impossible to overflow, unless that two values are very large or very samll
+	int delta_y = _delta_y + other._delta_y;
 	if (delta_y > 255 || delta_y < -255)
 	{
 		return false;
-	}*/
+	}
 
-	int delta_z = _delta_z + other._delta_z;
-	if (_delta_z > 0 && other._delta_z > 0 && delta_z < 0)
-	{
-		return false;
-	}
-	if (_delta_z < 0 && other._delta_z < 0 && delta_z >= 0)
-	{
-		return false;
-	}
+	// impossible to overflow, unless that two values are very large or very samll
+	char delta_z = _delta_z + other._delta_z;
 	if (delta_z > 7 || delta_z < -7)
 	{
 		return false;
