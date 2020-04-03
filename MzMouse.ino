@@ -7,14 +7,17 @@
 
 #include "PS2Mouse.h"
 #include "USBReader.h"
+#include "StatusLED.h"
 
 PS2Mouse ps2_mouse;
 USBReader usb_reader(&on_usb_data);
+StatusLED status_led;
 
 void on_usb_data(USBMouseData_Rapoo1680* data)
 {
-	// TODO: _delta_x or _delta_y out of range
+	status_led.busy();
 	ps2_mouse.sample(PS2MouseSample(data->_left_btn, data->_right_btn, data->_middle_btn, data->_delta_x, -data->_delta_y, -data->_delta_z));
+
 #ifdef MZ_MOUSE_DEBUG
 	Serial.print(data->_left_btn);
 	Serial.print(", ");
@@ -38,10 +41,12 @@ void setup()
 #endif
 	usb_reader.setup();
 	ps2_mouse.setup();
+	status_led.setup();
 }
 
 void loop()
 {
 	usb_reader.loop();
 	ps2_mouse.loop();
+	status_led.loop();
 }
