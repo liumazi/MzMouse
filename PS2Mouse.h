@@ -27,7 +27,7 @@ struct PS2MouseSample
 
 enum PS2MouseMode
 {
-	PS2_Mouse_Mode_Reset, PS2_Mouse_Mode_Stream, PS2_Mouse_Mode_Remote, PS2_Mouse_Mode_Wrap
+	PS2MouseMode_Reset, PS2MouseMode_Stream, PS2MouseMode_Remote, PS2MouseMode_Wrap
 };
 
 class PS2Mouse : public PS2dev

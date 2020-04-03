@@ -81,12 +81,12 @@ void PS2MouseSample::clear()
 
 PS2Mouse::PS2Mouse():
 PS2dev(PS2_MOUSE_CLK_PIN, PS2_MOUSE_DATA_PIN),
-_mode(PS2_Mouse_Mode_Reset),
+_mode(PS2MouseMode_Reset),
 _sample_rate(100),
 _resolution(2),
 _scaling(0),
 _enable(0), // we start off not enabled
-_last_mode(PS2_Mouse_Mode_Reset),
+_last_mode(PS2MouseMode_Reset),
 _sample_queue(),
 _last_sent_sample()
 {
@@ -131,7 +131,7 @@ void PS2Mouse::loop()
 
 void PS2Mouse::sample(const PS2MouseSample& sample)
 {
-	if (_mode == PS2_Mouse_Mode_Stream || _mode == PS2_Mouse_Mode_Remote)
+	if (_mode == PS2MouseMode_Stream || _mode == PS2MouseMode_Remote)
 	{
 		PS2MouseSample* last_sample = _sample_queue.tail();
 
@@ -258,7 +258,7 @@ void PS2Mouse::send_status()
 {
 	unsigned char byte_0 =
 		//(0 << 7) |
-		(_mode == PS2_Mouse_Mode_Remote ? 4 : 0) |
+		(_mode == PS2MouseMode_Remote ? 4 : 0) |
 		(_enable << 5) |
 		(_scaling << 4) |
 		//(0 << 3)
@@ -286,15 +286,15 @@ void PS2Mouse::process_cmd(int command)
 	switch (command)
 	{
 	case 0xFF: // reset
-		// _mode = PS2_Mouse_Mode_Reset;
+		// _mode = PS2MouseMode_Reset;
 		send_ack();
 
 		// the while loop lets us wait for the host to be ready, TODO: endless loop ??
 		while (write(0xAA)); // BAT successful  
 		while (write(0x00)); // device ID, no extended mouse
 
-		_last_mode = PS2_Mouse_Mode_Stream;
-		_mode = PS2_Mouse_Mode_Stream;
+		_last_mode = PS2MouseMode_Stream;
+		_mode = PS2MouseMode_Stream;
 		_sample_rate = 100;
 		_resolution = 2;
 		_scaling = 0;
@@ -315,8 +315,8 @@ void PS2Mouse::process_cmd(int command)
 		// Scaling = 1:1
 		// Disable Data Reporting
 
-		_last_mode = PS2_Mouse_Mode_Stream;
-		_mode = PS2_Mouse_Mode_Stream;
+		_last_mode = PS2MouseMode_Stream;
+		_mode = PS2MouseMode_Stream;
 		_sample_rate = 100;
 		_resolution = 2;
 		_scaling = 0;
@@ -342,7 +342,10 @@ void PS2Mouse::process_cmd(int command)
 		send_ack();
 		read(&value); // for now drop the new rate on the floor, while in read() inside
 		send_ack();
-
+#ifdef MZ_MOUSE_DEBUG
+		Serial.print("set sample rate ");
+		Serial.println(value, DEC);
+#endif
 		_sample_rate = value;
 		_sample_queue.clear();
 		break;
@@ -357,15 +360,15 @@ void PS2Mouse::process_cmd(int command)
 	case 0xF0: // set remote mode 
 		send_ack();
 
-		_last_mode = PS2_Mouse_Mode_Remote;
-		_mode = PS2_Mouse_Mode_Remote;
+		_last_mode = PS2MouseMode_Remote;
+		_mode = PS2MouseMode_Remote;
 		_sample_queue.clear();
 		break;
 
 	case 0xEE: // set wrap mode
 		send_ack();
 
-		_mode = PS2_Mouse_Mode_Wrap;
+		_mode = PS2MouseMode_Wrap;
 		_sample_queue.clear();
 		break;
 
@@ -376,7 +379,7 @@ void PS2Mouse::process_cmd(int command)
 		_sample_queue.clear();
 		break;
 
-	case 0xEB: // read data. if (_mode == PS2_Mouse_Mode_Remote) ..
+	case 0xEB: // read data. if (_mode == PS2MouseMode_Remote) ..
 		send_ack();
 		send_movement(); // not while ??
 
@@ -386,8 +389,8 @@ void PS2Mouse::process_cmd(int command)
 	case 0xEA: // set stream mode
 		send_ack();
 
-		_last_mode = PS2_Mouse_Mode_Stream;
-		_mode = PS2_Mouse_Mode_Stream;
+		_last_mode = PS2MouseMode_Stream;
+		_mode = PS2MouseMode_Stream;
 		_sample_queue.clear();
 		break;
 
@@ -402,7 +405,10 @@ void PS2Mouse::process_cmd(int command)
 		send_ack();
 		read(&value);
 		send_ack();
-
+#ifdef MZ_MOUSE_DEBUG
+		Serial.print("set resolution ");
+		Serial.println(value, DEC);
+#endif
 		_resolution = value;
 		_sample_queue.clear();
 		break;
