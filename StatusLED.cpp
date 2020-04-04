@@ -8,16 +8,16 @@
 #include <Arduino.h>
 #include "StatusLED.h"
 
-#define LED_R_PIN 9 // busy
+#define LED_R_PIN 5 // busy
 #define LED_G_PIN 6 // idle
-#define LED_B_PIN 5 // sleep
+#define LED_B_PIN 9 // sleep
 
 #define KEEP_BUSY_TIME 500
 #define KEEP_IDLE_TIME 15000
 
-#define MAX_PWM_R 55
+#define MAX_PWM_R 80
 #define MAX_PWM_G 30
-#define MAX_PWM_B 60
+#define MAX_PWM_B 70
 
 StatusLED::StatusLED():
 _status(DeviceStatus_Idle),
@@ -149,7 +149,7 @@ void StatusLED::loop()
 	case DeviceStatus_Sleep:
 		// update blue light brightness
 		_delta_accum += delta;
-		if (_delta_accum >= 90 - 60 * _brightness / MAX_PWM_B)
+		if (_delta_accum >= 60 - 55 * _brightness / MAX_PWM_B)
 		{
 			_delta_accum = 0;
 
