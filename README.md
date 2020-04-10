@@ -1,3 +1,5 @@
+![image](https://github.com/liumazi/MzMouse/blob/master/MzMouse.jpeg)
+
 # MzMouse
 Emulate a PS/2 mouse, Sample from the USB mouse, Powered by arduino.
 
